@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <title>Wisconsin Technical Colleges Explorer</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="stylesheet" href="https://js.arcgis.com/4.32/esri/themes/light/main.css" />
+    <script src="https://js.arcgis.com/4.32/"></script>
+    <script type="module" src=https://js.arcgis.com/calcite-components/3.0.3/calcite.esm.js></script>
+    <script type="module" src="https://js.arcgis.com/map-components/4.32/arcgis-map-components.esm.js"></script>
+
+    
+    <script>
+      require([
+        "esri/config",
+        "esri/Basemap",
+        "esri/Color",
+        "esri/views/MapView",
+        "esri/Map",
+        "esri/layers/FeatureLayer",
+        "esri/widgets/Home",
+        "esri/widgets/Expand",
+        "esri/widgets/Popup",
+        "esri/core/reactiveUtils",
+        "esri/widgets/Search",
+        "esri/layers/VectorTileLayer",
+        "esri/layers/GroupLayer",
+        "esri/renderers/UniqueValueRenderer",
+        "esri/popup/content/ImageMediaInfo",
+        "esri/popup/content/support/ImageMediaInfoValue",
+        "esri/popup/content/MediaContent", 
+        "esri/popup/content/TextContent",
+        "esri/popup/content/FieldsContent",
+        "esri/popup/FieldInfo"
+      ], (esriConfig, Basemap, Color, MapView, Map, FeatureLayer, Home, Expand, Popup, reactiveUtils, Search, VectorTileLayer, GroupLayer, UniqueValueRenderer, ImageMediaInfo, ImageMediaInfoValue, MediaContent, TextContent, FieldsContent, FieldInfo) => {
+        let programLayerView;
+
+        esriConfig.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurM9-pAcf23W5yt8y2jTB2KTwD4hT3CaM8-Mvb-G6W0-FIsq2JSo8bVD8CnfFdds-C3yfQS5ifnWzHbHGLTeLyYRm-N-Yb28B2z5MeAQ7K8UZ_C6cCAhoLzUX1cvi7bgi7J1l9-bzFcOdtmOBaDR0Yh0qYorElBvK1M25MB1dW2Gt0lDUnSPGUcpt8bK6sYqaZgiyD1PjZZezXAvGzMQZGBMAs2cOHWJJTxzFyJRUNZqwAT1_0VZxzgI2";
+            
+        const wiRenderer = {
+            type: "simple",
+            symbol : {
+                type: "simple-fill",
+                color: "rgba(255, 255, 255, 1)",
+                outline: {
+                    width: 1.5,
+                    color: "black"}
+                }
+        };
+
+        const wi = new FeatureLayer({
+            url: "https://dnrmaps.wi.gov/arcgis/rest/services/DW_Map_Dynamic/EN_Basic_Basemap_WTM_Ext_Dynamic_L16/MapServer/6",  
+            minScale: 0,
+            maxScale: 0,
+            renderer: wiRenderer,
+            
+        });
+
+        const mapBaseLayer = new VectorTileLayer({
+            url: "https://www.arcgis.com/sharing/rest/content/items/3afd423cbacf4d61a38f068264bd2d88/resources/styles/root.json",
+            effect: "blur(8px) brightness(1.2) grayscale(0.8)"
+        });
+
+        const tileLayer = new VectorTileLayer({
+            url: "https://www.arcgis.com/sharing/rest/content/items/12124841a631489fb71aa1c0c8952c49/resources/styles/root.json",
+            
+        });
+
+        const tileLayerRef = new VectorTileLayer({
+            url: "https://www.arcgis.com/sharing/rest/content/items/1768e8369a214dfab4e2167d5c5f2454/resources/styles/root.json",
+        });
+
+
+        const groupLayer = new GroupLayer({
+            layers: [tileLayer,tileLayerRef],
+            blendMode: "source-atop"
+        })
+        const groupLayer1 = new GroupLayer({
+            layers: [wi, groupLayer]
+        }); 
+
+       
+
+        const customBasemap = new Basemap({
+            baseLayers: [mapBaseLayer, groupLayer1],
+        });
+           
+        const map = new Map({
+            basemap: customBasemap,
+            
+            });
+               
+        const view = new MapView({
+            map: map,
+            container: "viewDiv",
+            center: [-89.82647, 43.60152],
+            zoom: 5,
+            
+        });
+
+        const homeBtn = new Home({
+          view:view
+        })
+
+        view.ui.add(homeBtn, "top-left")
+       
+        
+       
+        view.popup.visibleElements = {
+          actionBar: false
+        }
+
+        view.popup.dockOptions = {
+          position: "bottom-left"
+        }
+        
+        const muniRenderer = {
+            type: "simple",
+            symbol: {
+                type: "simple-fill",
+                color: "rgba(147, 33, 7, 0.7)",
+                outline: {
+                    width: 0
+                }
+            }
+        };
+
+        const collegeRenderer = {
+            type: "simple",
+            symbol: {
+                type: "simple-marker",
+                color: "#006cb3",
+                size: "14px",
+                outline: {
+                    color: [255,255,255],
+                    width: 0.5
+                }
+            }
+        };
+      
+          
+       
+        const muniPopup = {
+            title: "{Name}",
+           
+            outFields: ["*"],
+            fieldInfos: [
+                {
+                    fieldName: "Age_15_19",
+                    label: "Age 15-19"
+                },
+                {
+                    fieldName: "Age_20_24",
+                    label: "Age 20-24"
+                },
+                {
+                    fieldName: "Age_25_29",
+                    label: "Age 25-29"
+                },
+
+            ],
+            content: [
+                {
+                  type: "text",
+                  text: "{Ind_Link}"
+                },
+                {
+                    type: "text",
+                    text: "<p1>Population: <b>{Pop}</b></p1>",
+                    
+                },{
+                  type: "text",
+                  text: "<p1>Median Gross Rent: <b>{Rent}</b></p1>"
+                },
+                {
+                    type: "media",
+                    title: "<p><b>Population by Age</b></p>",
+                  
+                    mediaInfos:[
+                        {
+                            type: "column-chart",
+                            value: {
+                                fields: ["Age_15_19", "Age_20_24", "Age_25_29"],
+                                
+                                colors: [new Color("#1697f3"), new Color("#035b99"), new Color("#162fab")]
+                            }
+                        }
+                    ]
+                },{
+                  type:"text",
+                  text:"<span style='color:#1697f3'><b>Ages 15-19</b></span> / <span style='color:#035b99'><b>Ages 20-24</b></span>  / <span style='color:#162fab'><b> Ages 25-29</b></span>"
+                },
+                {
+                  type: "text",
+                  text: "<i>*Data from US Census Bureau</i>"
+                }
+                
+            ]
+        };
+
+        const labelClass = {
+          symbol: {
+            type: "text",
+            color: "#133e67",
+            haloColor: "white",
+            haloSize:2,
+            font:{
+              size: 10,
+              weight: "bold"
+            }},
+            labelPlacement: "above-center",
+            labelExpressionInfo: { expression: "$feature.Name"},
+            maxScale: 0,
+            minScale: 2500000,
+          }
+        
+
+        const municipalities = new FeatureLayer({
+            url: "https://services.arcgis.com/HRPe58bUyBqyyiCt/arcgis/rest/services/Municipalities/FeatureServer",
+            minScale:0,
+            maxScale:0,
+            renderer: muniRenderer,
+            popupTemplate: muniPopup
+        })
+      
+
+        const layer = new FeatureLayer({
+            url: "https://services.arcgis.com/HRPe58bUyBqyyiCt/arcgis/rest/services/Colleges_joined/FeatureServer",
+            minScale: 0,
+            maxScale: 0,
+            renderer:collegeRenderer,
+            popupTemplate: {
+              title: "{Name} - {Community}",
+              content: getInfo,
+              outFields: ["*"]
+            },
+            labelingInfo: labelClass
+
+        });
+
+
+        function getInfo(feature){
+          let graphic, attributes;
+          const div = document.createElement("div");
+          graphic = feature.graphic;
+          attributes = graphic.attributes;
+          let housingLink = []
+           if(attributes.Housing == "No housing through college" ){
+            housingLink = ""
+           } else{
+            housingLink = "<a href='"+ attributes.Housing_Link + "'target='_blank'>Learn More</a>" 
+           }
+           let recLink = []
+            if(attributes.Atheltics_Recreation == "None"){
+              recLink = ""
+            } else{
+              recLink = "<a href='" + attributes.AR_Link + "'target='_blank'>Learn More</a>"
+            }
+
+          div.innerHTML = "<a href='"+ attributes.College_Link + "'target='_blank'><img src=" + attributes.Logo_Link + "></a></br></br>" +
+            "<p><b>Enrollment: </b> " + attributes.Enrollment + "</br>" +
+            "<i>*Associate's degree sudents 2023-2024</i></br></br>" + 
+            "<b>Housing: </b>" + attributes.Housing  + "</br>" + housingLink
+             +"</br></br><b>Atheltics/Recreation: </b>" + attributes.Atheltics_Recreation 
+             + "</br>"+ recLink + "</p>"
+          return div;
+        }
+        
+
+        
+        
+        map.add(municipalities)
+        map.add(layer)
+        
+
+        const programsNodes = document.querySelectorAll(`.program-item`);
+        const programsElement = document.getElementById("programs-filter");
+
+        // click event handler for seasons choices
+        programsElement.addEventListener("click", filterByProgram);
+
+       
+        function filterByProgram(event) {
+          const selectedProgram = event.target.getAttribute("data-program");
+
+          
+          programLayerView.filter = {
+            where: selectedProgram + " = 'Y'"
+          }
+        }
+
+
+        view.whenLayerView(layer).then((layerView) => {
+          
+          programLayerView = layerView;
+
+         
+
+          // set up UI items
+          programsElement.style.visibility = "visible";
+          const programsExpand = new Expand({
+            view: view,
+            expandTooltip: "Explore Programs",
+            expandIcon: "filter",
+            content: programsElement,
+            label: "Explore Programs",
+            
+            
+          });
+          
+          reactiveUtils.when(
+            () => !programsExpand.expanded,
+            () => {
+              programLayerView.filter = null;
+            }
+          );
+        
+
+          view.ui.add(programsExpand, "top-right");
+          
+        });
+
+        
+
+      });
+
+      function closeBtn(){
+            document.getElementById("dialog").style.display = "none";
+        }
+
+     
+
+    </script>
+  </head>
+
+  <div id ="title" class="esri-widget">
+    <ah>Wisconsin Technical Colleges Explorer</ah></div>
+
+  <body>
+    <div id="programs-filter" class="esri-widget">
+      <div class="program-item visible-program" data-program="Accounting">Accounting</div>
+      <div class="program-item visible-program" data-program="Administrative_Professional">Administrative Professional</div>
+      <div class="program-item visible-program" data-program="Aeronautics___Pilot_Training">Aeronautics - Pilot Training</div>
+      <div class="program-item visible-program" data-program="Aesthetician___Advanced_Practic">Aesthetician - Advanced Practice</div>
+      <div class="program-item visible-program" data-program="Agirbusiness__Science___Technol">Agirbusiness, Science & Technology</div>
+      <div class="program-item visible-program" data-program="Agricultural_Equipment_Technolo">Agricultural Equipment Technology</div>
+      <div class="program-item visible-program" data-program="Agronomy_Management">Agronomy Management</div>
+      <div class="program-item visible-program" data-program="Air_Conditioning__Heating___Ref">Air Conditioning, Heating & Refrigeration Technology</div>
+      <div class="program-item visible-program" data-program="Aircraft_Electronics">Aircraft Electronics</div>
+      <div class="program-item visible-program" data-program="Anesthesia_Technology">Anesthesia Technology</div>
+      <div class="program-item visible-program" data-program="Animal_Science_Management">Animal Science Management</div>
+      <div class="program-item visible-program" data-program="Animation">Animation</div>
+      <div class="program-item visible-program" data-program="Arborist_Technician">Arborist Technician</div>
+      <div class="program-item visible-program" data-program="Architectural_Structural_Design">Architectural Structural Design</div>
+      <div class="program-item visible-program" data-program="Architectural_Technology">Architectural Technology</div>
+      <div class="program-item visible-program" data-program="Asset_Protection">Asset Protection</div>
+      <div class="program-item visible-program" data-program="Associate_of_Arts">Associate of Arts</div>
+      <div class="program-item visible-program" data-program="Associate_of_Science">Associate of Science</div>
+      <div class="program-item visible-program" data-program="Audio_Production">Audio Production</div>
+      <div class="program-item visible-program" data-program="Automated_Manufacturing_Systems">Automated Manufacturing Systems Technology</div>
+      <div class="program-item visible-program" data-program="Automation_Systems__Engineering">Automation Systems (Engineering) Technology</div>
+      <div class="program-item visible-program" data-program="Automotive_Technology">Automotive Technology</div>
+      <div class="program-item visible-program" data-program="Aviation_Management">Aviation Management,</div>
+      <div class="program-item visible-program" data-program="Baking___Pastry_Management">Baking & Pastry Management</div>
+      <div class="program-item visible-program" data-program="Banking___Financial_Services">Banking & Financial Services</div>
+      <div class="program-item visible-program" data-program="Behavior_Technician">Behavior Technician</div>
+      <div class="program-item visible-program" data-program="Biomedical_Electronics_Technolo">Biomedical Electronics Technology</div>
+      <div class="program-item visible-program" data-program="Biotechnology_Laboratory_Techni">Biotechnology Laboratory Technician</div>
+      <div class="program-item visible-program" data-program="Broadcast_Captioning">Broadcast Captioning</div>
+      <div class="program-item visible-program" data-program="Business_Analyst">Business Analyst</div>
+      <div class="program-item visible-program" data-program="Business_Management">Business Management</div>
+      <div class="program-item visible-program" data-program="Cardiovascular_Technology">Cardiovascular Technology</div>
+      <div class="program-item visible-program" data-program="Career___Technical_Education_In">Career & Technical Education Instruction</div>
+      <div class="program-item visible-program" data-program="Chemical_Technician">Chemical Technician</div>
+      <div class="program-item visible-program" data-program="Civil_Engineering_Technology">Civil Engineering Technology</div>
+      <div class="program-item visible-program" data-program="Communications">Communications</div>
+      <div class="program-item visible-program" data-program="Construction_Management_Technol">Construction Management Technology</div>
+      <div class="program-item visible-program" data-program="Construction_Safety_Technology">Construction Safety Technology</div>
+      <div class="program-item visible-program" data-program="Criminal_Justice_Studies">Criminal Justice Studies</div>
+      <div class="program-item visible-program" data-program="Culinary_Arts">Culinary Arts</div>
+      <div class="program-item visible-program" data-program="Culinary_Management">Culinary Management</div>
+      <div class="program-item visible-program" data-program="Dairy_Business_Management">Dairy Business Management</div>
+      <div class="program-item visible-program" data-program="Dental_Hygienist">Dental Hygienist</div>
+      <div class="program-item visible-program" data-program="Diagnostic_Medical_Sonography__">Diagnostic Medical Sonography (& Vascular Technology)</div>
+      <div class="program-item visible-program" data-program="Diesel_Equipment_Technology">Diesel Equipment Technology</div>
+      <div class="program-item visible-program" data-program="Digital_Marketing">Digital Marketing</div>
+      <div class="program-item visible-program" data-program="Early_Childhood_Education">Early Childhood Education</div>
+      <div class="program-item visible-program" data-program="Electrical_Engineering_Technolo">Electrical Engineering Technology</div>
+      <div class="program-item visible-program" data-program="Electro_Mechanical_Technology">Electro-Mechanical Technology</div>
+      <div class="program-item visible-program" data-program="Electronic_Engineering_Technolo">Electronic Engineering Technology</div>
+      <div class="program-item visible-program" data-program="Electronics">Electronics</div>
+      <div class="program-item visible-program" data-program="Emergency_Services_Management">Emergency Services Management</div>
+      <div class="program-item visible-program" data-program="Family___Consumer_Sciences_Educ">Family & Consumer Sciences Education Instruction</div>
+      <div class="program-item visible-program" data-program="Finance">Finance</div>
+      <div class="program-item visible-program" data-program="Fire_Medic">Fire Medic</div>
+      <div class="program-item visible-program" data-program="Fire_Protection_Technician">Fire Protection Technician</div>
+      <div class="program-item visible-program" data-program="Fitness__Recreation____Wellness">Fitness, Recreation, & Wellness Management</div>
+      <div class="program-item visible-program" data-program="Forensic_Science">Forensic Science</div>
+      <div class="program-item visible-program" data-program="Foundations_of_Teacher_Educatio">Foundations of Teacher Education</div>
+      <div class="program-item visible-program" data-program="Funeral_Service">Funeral Service</div>
+      <div class="program-item visible-program" data-program="Graphic_Design">Graphic Design</div>
+      <div class="program-item visible-program" data-program="Greenhouse_Operations">Greenhouse Operations</div>
+      <div class="program-item visible-program" data-program="Health___Wellness_Promotion">Health & Wellness Promotion</div>
+      <div class="program-item visible-program" data-program="Health_Information_Technology__">Health Information Technology (& Management)</div>
+      <div class="program-item visible-program" data-program="Hospitality_Management">Hospitality Management</div>
+      <div class="program-item visible-program" data-program="Human_Resources">Human Resources</div>
+      <div class="program-item visible-program" data-program="Human_Services_Associate">Human Services Associate</div>
+      <div class="program-item visible-program" data-program="Individualized_Technical_Studie">Individualized Technical Studies</div>
+      <div class="program-item visible-program" data-program="Industrial_Engineering_Technolo">Industrial Engineering Technology</div>
+      <div class="program-item visible-program" data-program="Industrial_Welding_Technology">Industrial Welding Technology</div>
+      <div class="program-item visible-program" data-program="Interior_Design">Interior Design</div>
+      <div class="program-item visible-program" data-program="IT___AI_Data_Specialist">IT - AI Data Specialist</div>
+      <div class="program-item visible-program" data-program="IT___Cloud_DevOps_Specialist">IT - Cloud DevOps Specialist</div>
+      <div class="program-item visible-program" data-program="IT___Computer_Support_Specialis">IT - Computer Support Specialist</div>
+      <div class="program-item visible-program" data-program="IT___Cyber_Compliance_Specialis">IT - Cyber Compliance Specialist</div>
+      <div class="program-item visible-program" data-program="IT___Cybersecurity_Specialist">IT - Cybersecurity Specialist</div>
+      <div class="program-item visible-program" data-program="IT___Data_Analyst">IT - Data Analyst</div>
+      <div class="program-item visible-program" data-program="IT___Front_End_Developer">IT - Front End Developer</div>
+      <div class="program-item visible-program" data-program="IT___Network_Specialist">IT - Network Specialist</div>
+      <div class="program-item visible-program" data-program="IT___Software_Developer">IT - Software Developer</div>
+      <div class="program-item visible-program" data-program="IT___Technical_Support_Speciali">IT - Technical Support Specialist</div>
+      <div class="program-item visible-program" data-program="IT___Web_Software_Developer">IT - Web Software Developer</div>
+      <div class="program-item visible-program" data-program="Laboratory_Food_Science_Technic">Laboratory Food Science Technician</div>
+      <div class="program-item visible-program" data-program="Landscape_Horticulture">Landscape Horticulture</div>
+      <div class="program-item visible-program" data-program="Landscape__Plant___Turf_Managem">Landscape, Plant & Turf Management</div>
+      <div class="program-item visible-program" data-program="Leadership_Development">Leadership Development</div>
+      <div class="program-item visible-program" data-program="Legal_Studies__Paralegal">Legal Studies/ Paralegal</div>
+      <div class="program-item visible-program" data-program="Library___Information_Services">Library & Information Services</div>
+      <div class="program-item visible-program" data-program="Management_Development">Management Development</div>
+      <div class="program-item visible-program" data-program="Manufacturing_Engineering_Techn">Manufacturing Engineering Technology</div>
+      <div class="program-item visible-program" data-program="Manufacturing_IT">Manufacturing IT</div>
+      <div class="program-item visible-program" data-program="Manufacturing_Management">Manufacturing Management</div>
+      <div class="program-item visible-program" data-program="Marketing">Marketing</div>
+      <div class="program-item visible-program" data-program="Massage_Therapy___Advanced_Prac">Massage Therapy - Advanced Practice</div>
+      <div class="program-item visible-program" data-program="Mechanical_Design_Engineering_T">Mechanical Design Engineering Technology</div>
+      <div class="program-item visible-program" data-program="Mechatronics_Specialist">Mechatronics Specialist</div>
+      <div class="program-item visible-program" data-program="Medical_Administrative_Coder">Medical Administrative Coder</div>
+      <div class="program-item visible-program" data-program="Medical_Administrative_Speciali">Medical Administrative Specialist</div>
+      <div class="program-item visible-program" data-program="Medical_Laboratory_Technician">Medical Laboratory Technician</div>
+      <div class="program-item visible-program" data-program="Natural_Resources_Technician">Natural Resources Technician</div>
+      <div class="program-item visible-program" data-program="Network_Systems_Administration">Network Systems Administration</div>
+      <div class="program-item visible-program" data-program="Neurodiagnostic_Technologist">Neurodiagnostic Technologist</div>
+      <div class="program-item visible-program" data-program="Nursing">Nursing</div>
+      <div class="program-item visible-program" data-program="Nutrition___Dietetic_Technician">Nutrition & Dietetic Technician</div>
+      <div class="program-item visible-program" data-program="Occupational_Therapy_Assisstant">Occupational Therapy Assisstant</div>
+      <div class="program-item visible-program" data-program="Office_Management">Office Management</div>
+      <div class="program-item visible-program" data-program="Paramedic_Technician">Paramedic Technician</div>
+      <div class="program-item visible-program" data-program="Pharmacy_Services_Management">Pharmacy Services Management</div>
+      <div class="program-item visible-program" data-program="Photography">Photography</div>
+      <div class="program-item visible-program" data-program="Physical_Therapist_Assistant">Physical Therapist Assistant</div>
+      <div class="program-item visible-program" data-program="Precision_Agriculture_Technolog">Precision Agriculture Technology</div>
+      <div class="program-item visible-program" data-program="Precision_Machining_Technology">Precision Machining Technology</div>
+      <div class="program-item visible-program" data-program="Professional_Communications">Professional Communications</div>
+      <div class="program-item visible-program" data-program="Quality_Engineering_Technology">Quality Engineering Technology</div>
+      <div class="program-item visible-program" data-program="Radiography">Radiography</div>
+      <div class="program-item visible-program" data-program="Real_Estate">Real Estate</div>
+      <div class="program-item visible-program" data-program="Residential_Construction_Manage">Residential Construction Management</div>
+      <div class="program-item visible-program" data-program="Respiratory_Therapy">Respiratory Therapy</div>
+      <div class="program-item visible-program" data-program="Safety_Engineering_Technology">Safety Engineering Technology</div>
+      <div class="program-item visible-program" data-program="Small_Business_Entrepeneurship">Small Business Entrepeneurship</div>
+      <div class="program-item visible-program" data-program="Substance_Use_Disorder_Counselo">Substance Use Disorder Counselor</div>
+      <div class="program-item visible-program" data-program="Supply_Chain_Management">Supply Chain Management</div>
+      <div class="program-item visible-program" data-program="Surgical_Technology">Surgical Technology</div>
+      <div class="program-item visible-program" data-program="Technical_Studies___Journeywork">Technical Studies - Journeyworker</div>
+      <div class="program-item visible-program" data-program="Veterinary_Technician">Veterinary Technician</div>
+      <div class="program-item visible-program" data-program="Video_Audio_Design">Video Audio Design</div>
+      <div class="program-item visible-program" data-program="Wildland_Firefighter">Wildland Firefighter</div>
+      <div class="program-item visible-program" data-program="Welding_Fabrication___Robotics">Welding Fabrication & Robotics</div>
+      </div>
+    <div id="viewDiv">
+      
+      </div>
+    </div>
+
+    <calcite-dialog open id="dialog" placement="center" class="custom-theme">
+      <calcite-custom-content>
+  
+              <img src="https://www.wtcsystem.edu/assets/Uploads/Logos/WITechCollegeSystem_CMYK.png" class="center">
+          
+         
+      </calcite-custom-content>
+      </br><h>Welcome to the Wisconsin Technical Explorer!</h>
+      <p1>Explore the 16 colleges in the Wisconsin Technical Colleges System and their communities.</p1>
+      <table id="navigation">
+        <tr>
+          <td><img src="https://raw.githubusercontent.com/Esri/calcite-ui-icons/master/icons/credit-card-24.svg" height ="32px" width ="32px"></td>
+          <td><p1>Tuition is the same for all 16 colleges!</p1></td>
+        </tr>
+      </table>  
+      <p2><i>*Books, materials or program/college-related fees are not included.</i></p2></br>
+
+      <p1>Click on the <span style="color:#006cb3; font-weight: bold;">blue</span> symbols to learn more about each collge.</p1>
+      <p1>College logos are linked to each college's main website</p1></br>
+      <p1>Click on the <span style="color:#932107; font-weight: bold;">orange</span> municipal boundaries to learn more about the surrounding community.</p1>
+      <table id="navigation1">
+        <tr>
+          <td> <img src="https://raw.githubusercontent.com/Esri/calcite-ui-icons/master/icons/filter-24.svg" height="32px" width="32px"></td>
+          <td><p1>Filter by associate's degree program</p1></td>
+        </tr>
+      </table>
+      
+      <calcite-button id="close" slot="footer-end" class="dialog-button" onclick="closeBtn()">
+          Let's Go!
+      </calcite-button>
+    </calcite-dialog>
+  </body>
+</html>
